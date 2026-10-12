@@ -278,10 +278,19 @@ class FullyConnectedNet(object):
         scores = X
         self.caches = []
         
-        # Hidden layers (Affine + [BatchNorm] + ReLU)
+        # Hidden layers (Affine + [BatchNorm/LayerNorm] + ReLU)
         for i in range(1, self.num_layers):
             if self.normalization == 'batchnorm':
                 scores, cache = affine_bn_relu_forward(
+                    scores, 
+                    self.params[f'W{i}'], 
+                    self.params[f'b{i}'],
+                    self.params[f'gamma{i}'],
+                    self.params[f'beta{i}'],
+                    self.bn_params[i-1]
+                )
+            elif self.normalization == 'layernorm':
+                scores, cache = affine_ln_relu_forward(
                     scores, 
                     self.params[f'W{i}'], 
                     self.params[f'b{i}'],
