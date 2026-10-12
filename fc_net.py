@@ -209,6 +209,11 @@ class FullyConnectedNet(object):
         for i in range(self.num_layers):
             self.params[f'W{i+1}'] = weight_scale * np.random.randn(layer_dims[i], layer_dims[i+1])
             self.params[f'b{i+1}'] = np.zeros(layer_dims[i+1])
+            
+            # Initialize batchnorm parameters for hidden layers
+            if self.normalization in ['batchnorm', 'layernorm'] and i < self.num_layers - 1:
+                self.params[f'gamma{i+1}'] = np.ones(layer_dims[i+1])
+                self.params[f'beta{i+1}'] = np.zeros(layer_dims[i+1])
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -273,12 +278,12 @@ class FullyConnectedNet(object):
         scores = X
         self.caches = []
         
-        # Affine + ReLU --> Hidden Layers
+        # Hidden layers (Affine + ReLU)
         for i in range(1, self.num_layers):
             scores, cache = affine_relu_forward(scores, self.params[f'W{i}'], self.params[f'b{i}'])
             self.caches.append(cache)
             
-        # Affine only --> Final output layer
+        # Final output layer (Affine only)
         scores, cache = affine_forward(scores, self.params[f'W{self.num_layers}'], self.params[f'b{self.num_layers}'])
         self.caches.append(cache)
 
@@ -309,16 +314,16 @@ class FullyConnectedNet(object):
 
         loss, dscores = softmax_loss(scores, y)
         
-        # add L2 Regularization to loss
+        # Add L2 Regularization to loss
         for i in range(1, self.num_layers + 1):
             loss += 0.5 * self.reg * np.sum(self.params[f'W{i}'] ** 2)
 
-        # backprop final layer (Affine only)
+        # Backprop final layer (Affine only)
         dout, dW, db = affine_backward(dscores, self.caches.pop())
         grads[f'W{self.num_layers}'] = dW + self.reg * self.params[f'W{self.num_layers}']
         grads[f'b{self.num_layers}'] = db
 
-        # backprop hidden layers (Affine + ReLU)
+        # Backprop hidden layers (Affine + ReLU)
         for i in range(self.num_layers - 1, 0, -1):
             dout, dW, db = affine_relu_backward(dout, self.caches.pop())
             grads[f'W{i}'] = dW + self.reg * self.params[f'W{i}']
