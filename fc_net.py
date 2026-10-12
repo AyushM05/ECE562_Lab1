@@ -342,12 +342,21 @@ class FullyConnectedNet(object):
         grads[f'W{self.num_layers}'] = dW + self.reg * self.params[f'W{self.num_layers}']
         grads[f'b{self.num_layers}'] = db
 
-        # Backprop hidden layers (Affine + ReLU)
+        # Backprop hidden layers (Affine + [BatchNorm/LayerNorm] + ReLU)
         for i in range(self.num_layers - 1, 0, -1):
-            dout, dW, db = affine_relu_backward(dout, self.caches.pop())
+            if self.normalization == 'batchnorm':
+                dout, dW, db, dgamma, dbeta = affine_bn_relu_backward(dout, self.caches.pop())
+                grads[f'gamma{i}'] = dgamma
+                grads[f'beta{i}'] = dbeta
+            elif self.normalization == 'layernorm':
+                dout, dW, db, dgamma, dbeta = affine_ln_relu_backward(dout, self.caches.pop())
+                grads[f'gamma{i}'] = dgamma
+                grads[f'beta{i}'] = dbeta
+            else:
+                dout, dW, db = affine_relu_backward(dout, self.caches.pop())
+                
             grads[f'W{i}'] = dW + self.reg * self.params[f'W{i}']
             grads[f'b{i}'] = db
-
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
