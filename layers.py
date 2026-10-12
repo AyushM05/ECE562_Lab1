@@ -198,7 +198,22 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        # first calculate mean and variance
+        mu = np.mean(x, axis=0)
+        var = np.var(x, axis=0)
+        
+        # normalize the data
+        x_norm = (x - mu) / np.sqrt(var + eps)
+        
+        # the scale and shift
+        out = gamma * x_norm + beta
+        
+        # updating running mean and variance
+        running_mean = momentum * running_mean + (1 - momentum) * mu
+        running_var = momentum * running_var + (1 - momentum) * var
+        
+        # storing variables for the backward pass
+        cache = (x, mu, var, x_norm, gamma, eps)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -213,7 +228,11 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        # finding the running mean and variance to normalize
+        x_norm = (x - running_mean) / np.sqrt(running_var + eps)
+        
+        # scaling and shift
+        out = gamma * x_norm + beta
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -290,7 +309,17 @@ def batchnorm_backward_alt(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    x, mu, var, x_norm, gamma, eps = cache
+    N, D = dout.shape
+
+    dbeta = np.sum(dout, axis=0)
+    dgamma = np.sum(dout * x_norm, axis=0)
+
+    dx_norm = dout * gamma
+    dvar = np.sum(dx_norm * (x - mu) * -0.5 * np.power(var + eps, -1.5), axis=0)
+    dmu = np.sum(dx_norm * -1.0 / np.sqrt(var + eps), axis=0) + dvar * np.sum(-2.0 * (x - mu) / N, axis=0)
+    
+    dx = (dx_norm / np.sqrt(var + eps)) + (dvar * 2.0 * (x - mu) / N) + (dmu / N)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
