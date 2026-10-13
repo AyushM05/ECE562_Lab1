@@ -562,7 +562,25 @@ def conv_forward_naive(x, w, b, conv_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    pad, stride = conv_param['pad'], conv_param['stride']
+    N, C, H, W = x.shape
+    F, C, HH, WW = w.shape
+    
+    out_H = 1 + (H + 2 * pad - HH) // stride
+    out_W = 1 + (W + 2 * pad - WW) // stride
+    
+    x_pad = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant')
+    out = np.zeros((N, F, out_H, out_W))
+    
+    for n in range(N):
+        for f in range(F):
+            for i in range(out_H):
+                for j in range(out_W):
+                    h_start = i * stride
+                    h_end = h_start + HH
+                    w_start = j * stride
+                    w_end = w_start + WW
+                    out[n, f, i, j] = np.sum(x_pad[n, :, h_start:h_end, w_start:w_end] * w[f]) + b[f]
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -591,7 +609,31 @@ def conv_backward_naive(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    x, w, b, conv_param = cache
+    pad, stride = conv_param['pad'], conv_param['stride']
+    N, C, H, W = x.shape
+    F, C, HH, WW = w.shape
+    _, _, out_H, out_W = dout.shape
+    
+    x_pad = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant')
+    dx_pad = np.zeros_like(x_pad)
+    dw = np.zeros_like(w)
+    db = np.zeros_like(b)
+    
+    for n in range(N):
+        for f in range(F):
+            for i in range(out_H):
+                for j in range(out_W):
+                    h_start = i * stride
+                    h_end = h_start + HH
+                    w_start = j * stride
+                    w_end = w_start + WW
+                    
+                    dw[f] += x_pad[n, :, h_start:h_end, w_start:w_end] * dout[n, f, i, j]
+                    dx_pad[n, :, h_start:h_end, w_start:w_end] += w[f] * dout[n, f, i, j]
+                    db[f] += dout[n, f, i, j]
+                    
+    dx = dx_pad[:, :, pad:pad+H, pad:pad+W]
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -625,7 +667,22 @@ def max_pool_forward_naive(x, pool_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    HH, WW, stride = pool_param['pool_height'], pool_param['pool_width'], pool_param['stride']
+    N, C, H, W = x.shape
+    
+    out_H = 1 + (H - HH) // stride
+    out_W = 1 + (W - WW) // stride
+    out = np.zeros((N, C, out_H, out_W))
+    
+    for n in range(N):
+        for c in range(C):
+            for i in range(out_H):
+                for j in range(out_W):
+                    h_start = i * stride
+                    h_end = h_start + HH
+                    w_start = j * stride
+                    w_end = w_start + WW
+                    out[n, c, i, j] = np.max(x[n, c, h_start:h_end, w_start:w_end])
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -652,7 +709,25 @@ def max_pool_backward_naive(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    x, pool_param = cache
+    HH, WW, stride = pool_param['pool_height'], pool_param['pool_width'], pool_param['stride']
+    N, C, H, W = x.shape
+    _, _, out_H, out_W = dout.shape
+    
+    dx = np.zeros_like(x)
+    
+    for n in range(N):
+        for c in range(C):
+            for i in range(out_H):
+                for j in range(out_W):
+                    h_start = i * stride
+                    h_end = h_start + HH
+                    w_start = j * stride
+                    w_end = w_start + WW
+                    
+                    window = x[n, c, h_start:h_end, w_start:w_end]
+                    max_val = np.max(window)
+                    dx[n, c, h_start:h_end, w_start:w_end] += (window == max_val) * dout[n, c, i, j]
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
